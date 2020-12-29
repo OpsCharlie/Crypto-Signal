@@ -1,0 +1,21 @@
+[Unit]
+Description=Crypto Signal starter
+After=docker.service network-online.target
+Requires=docker.service network-online.target
+BindsTo=docker.service
+
+[Service]
+WorkingDirectory=WORKINGDIR
+
+ExecStart=/usr/bin/docker-compose up
+
+ExecStop=/usr/bin/docker-compose stop
+
+ExecReload=/usr/bin/docker-compose stop
+ExecReload=/usr/bin/docker-compose up
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
