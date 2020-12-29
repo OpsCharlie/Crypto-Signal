@@ -12,17 +12,18 @@ class GmailNotifier(NotifierUtils):
     """Class for handling gmail notifications
     """
 
-    def __init__(self, username, password, destination_addresses):
+    def __init__(self, smtp_server, username, password, destination_addresses):
         """Initialize GmailNotifier class
 
         Args:
+            smtp_server (str): Smtp server in case we don't use gmail
             username (str): Username of the gmail account to use for sending message.
             password (str): Password of the gmail account to use for sending message.
             destination_addresses (list): A list of email addresses to notify.
         """
 
         self.logger = structlog.get_logger()
-        self.smtp_server = 'smtp.gmail.com:587'
+        self.smtp_server = smtp_server
         self.username = username
         self.password = password
         self.destination_addresses = ','.join(destination_addresses)
@@ -46,8 +47,8 @@ class GmailNotifier(NotifierUtils):
         message = header + message
 
         smtp_handler = smtplib.SMTP(self.smtp_server)
-        smtp_handler.starttls()
-        smtp_handler.login(self.username, self.password)
+        #  smtp_handler.starttls()
+        #  smtp_handler.login(self.username, self.password)
         result = smtp_handler.sendmail(self.username, self.destination_addresses, message)
         smtp_handler.quit()
         return result

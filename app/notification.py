@@ -59,6 +59,7 @@ class Notifier():
         self.gmail_configured = self._validate_required_config('gmail', notifier_config)
         if self.gmail_configured:
             self.gmail_client = GmailNotifier(
+                smtp_server=notifier_config['gmail']['required']['smtp_server'],
                 username=notifier_config['gmail']['required']['username'],
                 password=notifier_config['gmail']['required']['password'],
                 destination_addresses=notifier_config['gmail']['required']['destination_emails']
