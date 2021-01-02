@@ -16,3 +16,4 @@ install:
 	install -m0644 -D docker-compose.yml ${INSTALLDIR}/docker-compose.yml
 	install -m0644 -D systemd.service /etc/systemd/system/${DOCKER_CONTAINER_NAME}.service
 	sed -i "s|WORKINGDIR|${INSTALLDIR}|" /etc/systemd/system/${DOCKER_CONTAINER_NAME}.service
+	systemctl daemon-reload
