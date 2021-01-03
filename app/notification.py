@@ -241,7 +241,7 @@ class Notifier():
             new_analysis (dict): The new_analysis to send.
         """
 
-        if self.stdout_configured:
+        if self.trader_configured:
             message = self._indicator_message_templater(
                 new_analysis,
                 "{{status}} {{market}}"
