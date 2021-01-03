@@ -12,6 +12,7 @@ from notifiers.gmail_client import GmailNotifier
 from notifiers.telegram_client import TelegramNotifier
 from notifiers.webhook_client import WebhookNotifier
 from notifiers.stdout_client import StdoutNotifier
+from notifiers.trader_client import TraderNotifier
 
 class Notifier():
     """Handles sending notifications via the configured notifiers
@@ -84,6 +85,15 @@ class Notifier():
             )
             enabled_notifiers.append('webhook')
 
+        self.trader_configured = self._validate_required_config('trader', notifier_config)
+        if self.trader_configured:
+            self.trader_client = TraderNotifier(
+                exchange=notifier_config['trader']['required']['exchange'],
+                key=notifier_config['trader']['required']['key'],
+                secret=notifier_config['trader']['required']['secret']
+            )
+            enabled_notifiers.append('trader')
+
         self.stdout_configured = self._validate_required_config('stdout', notifier_config)
         if self.stdout_configured:
             self.stdout_client = StdoutNotifier()
@@ -106,6 +116,7 @@ class Notifier():
         self.notify_telegram(new_analysis)
         self.notify_webhook(new_analysis)
         self.notify_stdout(new_analysis)
+        self.notify_trader(new_analysis)
 
     def notify_discord(self, new_analysis):
         """Send a notification via the discord notifier
@@ -222,6 +233,21 @@ class Notifier():
             )
             if message.strip():
                 self.stdout_client.notify(message)
+
+    def notify_trader(self, new_analysis):
+        """Buy or sell on exchange
+
+        Args:
+            new_analysis (dict): The new_analysis to send.
+        """
+
+        if self.stdout_configured:
+            message = self._indicator_message_templater(
+                new_analysis,
+                "{{status}} {{market}}"
+            )
+            if message.strip():
+                self.trader_client.notify(message)
 
     def _validate_required_config(self, notifier, notifier_config):
         """Validate the required configuration items are present for a notifier.
