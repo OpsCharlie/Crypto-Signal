@@ -1,4 +1,4 @@
-DOCKER_REPO_NAME ?= shadowreaver/
+DOCKER_REPO_NAME ?= opscharlie/
 DOCKER_CONTAINER_NAME ?= crypto-signal
 DOCKER_IMAGE_NAME ?= ${DOCKER_REPO_NAME}${DOCKER_CONTAINER_NAME}
 GIT_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
