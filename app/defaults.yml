@@ -32,6 +32,11 @@ notifiers:
       webhook: null
     optional:
       template: "{{exchange}}-{{market}}-{{indicator}}-{{indicator_number}} is {{status}}!{{ '\n' -}}"
+  trader:
+    required:
+      exchange: null
+      key: null
+      secret: null
   gmail:
     required:
       username: null
