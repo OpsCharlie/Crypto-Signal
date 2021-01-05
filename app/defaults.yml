@@ -32,9 +32,8 @@ notifiers:
       webhook: null
     optional:
       template: "{{exchange}}-{{market}}-{{indicator}}-{{indicator_number}} is {{status}}!{{ '\n' -}}"
-  trader:
+  bittrex:
     required:
-      exchange: null
       key: null
       secret: null
   gmail:
