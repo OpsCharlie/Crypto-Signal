@@ -29,11 +29,12 @@ class BittrexNotifier(NotifierUtils):
         direction=message.split()[0]
         market=message.split()[1]
 
+        print('bittrex trader is', direction)
         if direction == "hot":
             self.bittrex('BUY', market)
         elif direction == "cold":
             currency = market.split('/')[1]
-            self.bittrex(self, self.exchange)('SELL', market)
+            self.bittrex('SELL', market)
 
 
     def create_signature(self, epoch_time, url, method, payload):
@@ -78,8 +79,8 @@ class BittrexNotifier(NotifierUtils):
         payload=("{\"marketSymbol\": \"" + self.market + "\"," +
                  "\"direction\": \"" + direction + "\"," +
                  "\"type\": \"MARKET\"," +
-                 "\"quantity\": " + quantity + "\"," +
-                 "\"timeInForce\": \"GOOD_TIL_CANCELLED\"}")
+                 "\"quantity\": \"" + quantity + "\"," +
+                 "\"timeInForce\": \"IMMEDIATE_OR_CANCEL\"}")
         payload_hash, signature = self.create_signature(epoch_time, url, 'POST', payload)
         headers = {
             'Api-Key': self.key,
