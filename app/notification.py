@@ -4,6 +4,7 @@
 import json
 import structlog
 from jinja2 import Template
+from datetime import datetime
 
 from notifiers.twilio_client import TwilioNotifier
 from notifiers.slack_client import SlackNotifier
@@ -28,6 +29,7 @@ class Notifier():
         self.logger = structlog.get_logger()
         self.notifier_config = notifier_config
         self.last_analysis = dict()
+        self.should_alert= True
 
         enabled_notifiers = list()
         self.logger = structlog.get_logger()
@@ -108,6 +110,8 @@ class Notifier():
             new_analysis (dict): The new_analysis to send.
         """
 
+        self.current_time = datetime.now().strftime("%H:%M:%S")
+        self.should_alert = self._indicator_message_should_alert(new_analysis)
         self.notify_slack(new_analysis)
         self.notify_discord(new_analysis)
         self.notify_twilio(new_analysis)
@@ -174,6 +178,7 @@ class Notifier():
 
         if self.gmail_configured:
             message = self._indicator_message_templater(
+                self.should_alert,
                 new_analysis,
                 self.notifier_config['gmail']['optional']['template']
             )
@@ -225,8 +230,10 @@ class Notifier():
             new_analysis (dict): The new_analysis to send.
         """
 
+        print(self.current_time, 'Start stdout, if configured:', self.stdout_configured)
         if self.stdout_configured:
             message = self._indicator_message_templater(
+                self.should_alert,
                 new_analysis,
                 self.notifier_config['stdout']['optional']['template']
             )
@@ -242,6 +249,7 @@ class Notifier():
 
         if self.bittrex_configured:
             message = self._indicator_message_templater(
+                self.should_alert,
                 new_analysis,
                 "{{status}} {{market}}"
             )
@@ -266,7 +274,90 @@ class Notifier():
         return notifier_configured
 
 
-    def _indicator_message_templater(self, new_analysis, template):
+    def _indicator_message_should_alert(self, new_analysis):
+        """Checks if we should alert
+
+        Args:
+            new_analysis (dict): A dictionary of data related to the analysis to send a message about.
+
+        Returns:
+            bool: True if we should alert with the notifiers.
+        """
+
+        if not self.last_analysis:
+            self.last_analysis = new_analysis
+
+        new_message = str()
+        should_alert = True
+        for exchange in new_analysis:
+            for market in new_analysis[exchange]:
+                for indicator_type in new_analysis[exchange][market]:
+                    if indicator_type == 'informants':
+                        continue
+                    for indicator in new_analysis[exchange][market][indicator_type]:
+                        for index, analysis in enumerate(new_analysis[exchange][market][indicator_type][indicator]):
+                            if analysis['result'].shape[0] == 0:
+                                continue
+
+                            values = dict()
+
+                            if indicator_type == 'indicators':
+                                for signal in analysis['config']['signal']:
+                                    latest_result = analysis['result'].iloc[-1]
+
+                                    values[signal] = analysis['result'].iloc[-1][signal]
+                                    if isinstance(values[signal], float):
+                                        values[signal] = format(values[signal], '.8f')
+                            elif indicator_type == 'crossovers':
+                                latest_result = analysis['result'].iloc[-1]
+
+                                key_signal = '{}_{}'.format(
+                                    analysis['config']['key_signal'],
+                                    analysis['config']['key_indicator_index']
+                                )
+
+                                crossed_signal = '{}_{}'.format(
+                                    analysis['config']['crossed_signal'],
+                                    analysis['config']['crossed_indicator_index']
+                                )
+
+                                values[key_signal] = analysis['result'].iloc[-1][key_signal]
+                                if isinstance(values[key_signal], float):
+                                        values[key_signal] = format(values[key_signal], '.8f')
+
+                                values[crossed_signal] = analysis['result'].iloc[-1][crossed_signal]
+                                if isinstance(values[crossed_signal], float):
+                                        values[crossed_signal] = format(values[crossed_signal], '.8f')
+
+                            status = 'neutral'
+                            if latest_result['is_hot']:
+                                status = 'hot'
+                            elif latest_result['is_cold']:
+                                status = 'cold'
+
+                            # Save status of indicator's new analysis
+                            new_analysis[exchange][market][indicator_type][indicator][index]['status'] = status
+
+                            if latest_result['is_hot'] or latest_result['is_cold']:
+                                try:
+                                    last_status = self.last_analysis[exchange][market][indicator_type][indicator][index]['status']
+                                except:
+                                    last_status = str()
+
+                                if analysis['config']['alert_frequency'] == 'once':
+                                    if last_status == status:
+                                        should_alert = False
+
+                                if not analysis['config']['alert_enabled']:
+                                    should_alert = False
+
+
+        # Merge changes from new analysis into last analysis
+        self.last_analysis = {**self.last_analysis, **new_analysis}
+        return should_alert
+
+
+    def _indicator_message_templater(self, should_alert, new_analysis, template):
         """Creates a message from a user defined template
 
         Args:
@@ -336,14 +427,6 @@ class Notifier():
                                     last_status = self.last_analysis[exchange][market][indicator_type][indicator][index]['status']
                                 except:
                                     last_status = str()
-
-                                should_alert = True
-                                if analysis['config']['alert_frequency'] == 'once':
-                                    if last_status == status:
-                                        should_alert = False
-
-                                if not analysis['config']['alert_enabled']:
-                                    should_alert = False
 
                                 if should_alert:
                                     base_currency, quote_currency = market.split('/')
